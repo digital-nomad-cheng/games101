@@ -6,6 +6,24 @@
 
 constexpr double MY_PI = 3.1415926;
 
+// bonus assignment: rorate around arbitrary angle cross the origin
+Eigen::Matrix4f get_rotation_matrix(Vector3f axis, float angle) 
+{
+    Eigen::Matrix4f rotate = Eigen::Matrix4f::Identity();
+    Eigen::Matrix3f N = Eigen::Matrix3f::Identity();
+    N << 0, -axis[2], axis[1], 
+        axis[2], 0, -axis[0], 
+        -axis[1], axis[0], 0;
+    Eigen::Matrix3f rotate_ = Eigen::Matrix3f::Identity();
+    rotate_ = cos(angle)*rotate_ + (1-cos(angle))*axis*axis.transpose() + sin(angle)*N;
+    rotate << rotate_(0), rotate_(1), rotate_(2), 0,
+         rotate_(3), rotate_(4), rotate_(5), 0,
+         rotate_(6), rotate_(7), rotate_(8), 0,
+         0, 0, 0, 1;
+    return rotate;
+}
+
+
 Eigen::Matrix4f get_view_matrix(Eigen::Vector3f eye_pos)
 {
     Eigen::Matrix4f view = Eigen::Matrix4f::Identity();
@@ -26,10 +44,14 @@ Eigen::Matrix4f get_model_matrix(float rotation_angle)
     // TODO: Implement this function
     // Create the model matrix for rotating the triangle around the Z axis.
     // Then return it.
+    rotation_angle = rotation_angle / 180.0f * MY_PI;
     model << cos(rotation_angle), -sin(rotation_angle), 0, 0,
         sin(rotation_angle), cos(rotation_angle), 0, 0,
         0, 0, 1, 0,
         0, 0, 0, 1;
+    std::cout << "rotate matrix manually calculating \n" << model << std::endl;
+    // model = get_rotation_matrix(Vector3f(0, 0, 1), rotation_angle);
+    std::cout << "rotate matrix using fuction \n" << model << std::endl;
     return model;
 }
 
@@ -48,9 +70,9 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio,
     Eigen::Matrix4f ortho = Eigen::Matrix4f::Identity();
     Eigen::Matrix4f persp_ortho = Eigen::Matrix4f::Identity();
 
-    float n = zNear;
-    float f = zFar;
-    float t = tan(eye_fov/2)  * zNear;
+    float n = -zNear;
+    float f = -zFar;
+    float t = tan(eye_fov/180.0f * MY_PI)  * abs(zNear);
     float b = -t;
     float r = aspect_ratio * t;
     float l = -r;
@@ -109,7 +131,7 @@ int main(int argc, const char** argv)
         r.set_model(get_model_matrix(angle));
         r.set_view(get_view_matrix(eye_pos));
         r.set_projection(get_projection_matrix(45, 1, 0.1, 50));
-
+        
         r.draw(pos_id, ind_id, rst::Primitive::Triangle);
         cv::Mat image(700, 700, CV_32FC3, r.frame_buffer().data());
         image.convertTo(image, CV_8UC3, 1.0f);
